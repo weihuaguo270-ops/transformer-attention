@@ -206,9 +206,19 @@ if __name__ == "__main__":
     print("输入输出 shape 一致，所以可以堆叠多层")
 
     # 堆叠 2 层: 每层的输出作为下一层的输入
-    print("\n堆叠 2 层:")
+    print("\n堆叠 3 层验证稳定性:")
     x = X
-    for i in range(2):
-        x = block.forward(x, use_mask=True)
-        print(f"  第 {i+1} 层输出范数: {np.linalg.norm(x):.3f}")
-    print("数值稳定（没爆炸也没消失）= 残差连接 + LayerNorm 在起作用")
+    norms = []
+    for i in range(3):
+        x = block(x, use_mask=True)
+        norm = torch.norm(x).item()
+        norms.append(norm)
+        print(f"  第 {i+1} 层输出范数: {norm:.3f}")
+
+    # 实际判断：连续两层范数变化不超过 10 倍就算稳定
+    max_norm = max(norms)
+    min_norm = min(norms)
+    if min_norm > 0.1 and max_norm / min_norm < 10:
+        print("✅ 数值稳定（残差连接 + LayerNorm 在起作用）")
+    else:
+        print(f"⚠️ 数值异常: 范数变化范围 {min_norm:.3f} ~ {max_norm:.3f}")

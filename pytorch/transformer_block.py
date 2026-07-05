@@ -91,8 +91,16 @@ if __name__ == "__main__":
 
     print("\n堆叠 3 层验证稳定性:")
     x = X
+    norms = []
     for i in range(3):
         x = block(x, use_mask=True)
         norm = torch.norm(x).item()
+        norms.append(norm)
         print(f"  第 {i+1} 层输出范数: {norm:.3f}")
-    print("数值稳定（没爆炸也没消失）")
+
+    max_norm = max(norms)
+    min_norm = min(norms)
+    if min_norm > 0.1 and max_norm / min_norm < 10:
+        print("✅ 数值稳定（没爆炸也没消失）")
+    else:
+        print(f"⚠️ 数值异常: 范数变化范围 {min_norm:.3f} ~ {max_norm:.3f}")
