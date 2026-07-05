@@ -28,18 +28,15 @@ Transformer 架构的核心是 Attention 机制，但主流框架（PyTorch、Te
 
 ## 安装与运行
 
-### 依赖
-
-- Python 3.8+
-- NumPy（仅此一个依赖）
+### 安装
 
 ```bash
 pip install numpy
 ```
 
-### 按顺序运行
+### 运行
 
-建议按以下顺序阅读代码，每个文件独立可运行：
+按顺序阅读代码，每个文件独立可运行：
 
 ```bash
 # 1. Self-Attention 原理
@@ -57,6 +54,29 @@ python positional_encoding.py
 # 5. 完整 Transformer Block
 python transformer_block.py
 ```
+
+### 运行测试
+
+```bash
+python test_all.py
+```
+
+输出示例：
+
+```
+【utils 工具函数】
+  ✅ softmax 形状
+  ✅ softmax 行和为1
+  ✅ attention 单头 Self-Attention
+  ✅ 因果掩码形状
+  ✅ 词0只看自己
+  ...
+🎉 全部测试通过!
+```
+
+当前共 **28 项测试**，覆盖 utils / attention / multi_head_attention / kv_cache / positional_encoding / transformer_block 六个模块，**无需外部框架**。
+
+---
 
 ### 运行示例
 
