@@ -227,6 +227,10 @@ PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
 
 ## 架构总览
 
+### Decoder-only（`transformer_block.py`）
+
+适用于自回归生成（GPT 风格）。
+
 ```
 输入 (seq_len, d_model)
         │
@@ -252,6 +256,41 @@ PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
   KV Cache（推理时复用）       ← kv_cache.py
         │
   输出 → 预测下一个词
+```
+
+### Encoder-Decoder（`encoder_decoder.py`）
+
+适用于翻译、摘要等需要"理解输入再生成"的任务。
+
+```
+原句子 (seq_enc, d_model)          目标句子 (seq_dec, d_model)
+        │                                    │
+  [Positional Encoding]              [Positional Encoding]
+        │                                    │
+  ┌──────────────┐                   ┌─────────────────────────┐
+  │ Encoder × N   │                   │ Decoder × N              │
+  │ 双向 Self-Attn │                   │  ┌───────────────────┐   │
+  │ (无因果掩码)    │                   │  │ Self-Attention    │   │
+  │      ↓         │                   │  │ (因果掩码)         │   │
+  │ +残差+LayerNorm│                   │  └────────┬──────────┘   │
+  │      ↓         │                   │           ↓              │
+  │ FFN → +残差+LN  │  Cross-Attention    │  ┌───────────────────┐   │
+  └──────┬───────┘  ←────── Q=decoder ──→│  │ Cross-Attention   │   │
+         │           ──── K,V=encoder ──→│  │ (看原句子)         │   │
+   encoder_output                         │  └────────┬──────────┘   │
+         │                                │           ↓              │
+         └───────────────────────────────── → +残差+LayerNorm       │
+                                            │           ↓              │
+                                            │  ┌───────────────────┐   │
+                                            │  │ FFN               │   │
+                                            │  └────────┬──────────┘   │
+                                            │           ↓              │
+                                            │  +残差+LayerNorm         │
+                                            └─────────────────────────┘
+                                                       │
+                                              [LM Head]
+                                                       │
+                                              vocab 概率 → 预测下一个词
 ```
 
 ## 模块依赖关系
