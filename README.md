@@ -251,51 +251,38 @@ Decoder:  Self-Attention(因果掩码) → +残差 → LayerNorm → Cross-Atten
 
 ## 架构总览
 
-> 以下架构图使用 [Excalidraw](https://excalidraw.com) 绘制。
-> 拖拽对应的 `.excalidraw` 文件到 excalidraw.com 即可查看和编辑。
-
-### Decoder-only（`transformer_block.py`）→ [`docs/decoder_only.excalidraw`](./docs/decoder_only.excalidraw)
+### Decoder-only（`transformer_block.py`）
 
 适用于自回归生成（GPT 风格）。
 
+![Decoder-only 架构](https://excalidraw.com/#json=uSrZY8JVpiZd__MNv1JSR,ws7MF4pzn5tiJKKB_6upHw)
+
 ```
-  输入 → Positional Encoding → Transformer Block × N → KV Cache → 输出 → 预测下一个词
-                               ┌─────────────────────────┐
-                               │ 每层:                    │
-                               │  Self-Attention(因果掩码) │
-                               │  + 残差连接 + LayerNorm  │
-                               │  FFN + 残差 + LayerNorm  │
-                               └─────────────────────────┘
+  输入 → Positional Encoding → Transformer Block × N → KV Cache → 输出
+  ┌────────────────────────────────────────────────────────────┐
+  │ 每层: Self-Attention(因果掩码) → +残差+LayerNorm → FFN    │
+  │       → +残差+LayerNorm                                    │
+  └────────────────────────────────────────────────────────────┘
 ```
 
-### Encoder-Decoder（`encoder_decoder.py`）→ [`docs/encoder_decoder.excalidraw`](./docs/encoder_decoder.excalidraw)
+### Encoder-Decoder（`encoder_decoder.py`）
 
 适用于翻译、摘要等需要"理解输入再生成"的任务。Decoder 自回归逐词生成。
 
+![Encoder-Decoder 架构](https://excalidraw.com/#json=G8ku8aRjH6W4VPnGToYGg,LT7tMUYzTTSgvULFUDRyNA)
+
 ```
-Encoder:                  Decoder（自回归循环）:
-  原句子                    第1步: [<BOS>]
-    ↓                        ↓
-  Positional Encoding       Positional Encoding
-    ↓                        ↓
-  Encoder Block × N         Self-Attention(因果掩码)
-    ↓                        ↓
-  encoder_output             + 残差 + LayerNorm
-    ↓                        ↓
-  ──K,V 传入每步──→        Cross-Attention(Q=decoder, K,V=encoder)
+Encoder:                     Decoder（自回归逐词生成）:
+  原句子 → PE → Encoder×N     [<BOS>] → PE → Self-Attn → Cross-Attn → FFN → LM Head
                               ↓
-                            + 残差 + LayerNorm
+                     拼回输入 ← 取概率最大的词
                               ↓
-                            FFN + 残差 + LayerNorm
-                              ↓
-                            LM Head → vocab 概率
-                              ↓
-                          取概率最大的词 ──→ 拼回输入，继续下一轮
-                              ↓
-                          最终输出完整译文
+                          完整译文
 ```
 
-### 模块总览 → [`docs/modules_overview.excalidraw`](./docs/modules_overview.excalidraw)
+### 模块总览
+
+![模块总览](https://excalidraw.com/#json=UAUrkmcPT3sxWzUgn4xbN,KOoq99EUofpKpcAO9c64BQ)
 
 **自回归生成循环（推理时）：**
 
