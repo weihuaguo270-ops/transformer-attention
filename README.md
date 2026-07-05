@@ -284,37 +284,54 @@ Decoder:  Self-Attention(因果掩码) → +残差 → LayerNorm → Cross-Atten
 
 ### Encoder-Decoder（`encoder_decoder.py`）
 
-适用于翻译、摘要等需要"理解输入再生成"的任务。
+适用于翻译、摘要等需要"理解输入再生成"的任务。Decoder 自回归逐词生成。
 
 ```
-原句子 (seq_enc, d_model)          目标句子 (seq_dec, d_model)
+原句子 (seq_enc, d_model)         Decoder 输入（当前已生成的词）
         │                                    │
   [Positional Encoding]              [Positional Encoding]
         │                                    │
-  ┌──────────────┐                   ┌─────────────────────────┐
-  │ Encoder × N   │                   │ Decoder × N              │
-  │ 双向 Self-Attn │                   │  ┌───────────────────┐   │
-  │ (无因果掩码)    │                   │  │ Self-Attention    │   │
-  │      ↓         │                   │  │ (因果掩码)         │   │
-  │ +残差+LayerNorm│                   │  └────────┬──────────┘   │
-  │      ↓         │                   │           ↓              │
-  │ FFN → +残差+LN  │  Cross-Attention    │  ┌───────────────────┐   │
-  └──────┬───────┘  ←────── Q=decoder ──→│  │ Cross-Attention   │   │
-         │           ──── K,V=encoder ──→│  │ (看原句子)         │   │
-   encoder_output                         │  └────────┬──────────┘   │
-         │                                │           ↓              │
-         └───────────────────────────────── → +残差+LayerNorm       │
-                                            │           ↓              │
-                                            │  ┌───────────────────┐   │
-                                            │  │ FFN               │   │
-                                            │  └────────┬──────────┘   │
-                                            │           ↓              │
-                                            │  +残差+LayerNorm         │
-                                            └─────────────────────────┘
+  ┌──────────────┐                   ┌──────────────────────┐
+  │ Encoder × N   │                   │ Decoder × N           │
+  │ 双向 Self-Attn │                   │  ┌────────────────┐   │
+  │ (无因果掩码)    │                   │  │ Self-Attention │   │
+  │      ↓         │                   │  │ (因果掩码)      │   │
+  │ +残差+LayerNorm│                   │  └───────┬────────┘   │
+  │      ↓         │                   │          ↓            │
+  │ FFN → +残差+LN  │  Cross-Attention    │  ┌────────────────┐   │
+  └──────┬───────┘  ←────── Q=decoder ──→│  │ Cross-Attn    │   │
+         │           ──── K,V=encoder ──→│  │ (看原句子)      │   │
+   encoder_output                         │  └───────┬────────┘   │
+         │                                │          ↓            │
+         └───────────────── 传入每步 ─────→ +残差+LayerNorm       │
+                                            │          ↓            │
+                                            │  ┌────────────────┐   │
+                                            │  │ FFN            │   │
+                                            │  └───────┬────────┘   │
+                                            │          ↓            │
+                                            │  +残差+LayerNorm      │
+                                            └──────────────────────┘
                                                        │
                                               [LM Head]
                                                        │
-                                              vocab 概率 → 预测下一个词
+                                              vocab 概率
+                                                       │
+                                         取概率最大的词 ──→ 拼回 Decoder 输入
+                                         ↓                    │
+                                        自回归循环              │
+                                        (重复 N 步)            │
+                                                                │
+                                        最终输出完整译文
+```
+
+**自回归生成循环（推理时）：**
+
+```python
+generated = [<BOS>]
+for step in range(max_len):
+    logits = decoder(encoder_output, generated)
+    next_token = argmax(logits[-1])   # 只取最后一步的预测
+    generated.append(next_token)      # 拼回输入，继续下一轮
 ```
 
 ## 模块依赖关系
