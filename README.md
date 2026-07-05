@@ -76,6 +76,28 @@ python test_all.py
 
 当前共 **28 项测试**，覆盖 utils / attention / multi_head_attention / kv_cache / positional_encoding / transformer_block 六个模块，**无需外部框架**。
 
+### PyTorch 版
+
+项目同时提供了 [PyTorch 版](./pytorch/) 实现，与 NumPy 版一一对应：
+
+| 模块 | NumPy | PyTorch |
+|------|-------|---------|
+| 工具函数 | `utils.py` | [`pytorch/utils.py`](./pytorch/utils.py) |
+| 单头 Attention | `attention.py` | [`pytorch/attention.py`](./pytorch/attention.py) |
+| 多头注意力 | `multi_head_attention.py` | [`pytorch/multi_head_attention.py`](./pytorch/multi_head_attention.py) |
+| KV Cache | `kv_cache.py` | [`pytorch/kv_cache.py`](./pytorch/kv_cache.py) |
+| 位置编码 | `positional_encoding.py` | [`pytorch/positional_encoding.py`](./pytorch/positional_encoding.py) |
+| Transformer Block | `transformer_block.py` | [`pytorch/transformer_block.py`](./pytorch/transformer_block.py) |
+| 测试 | `test_all.py` | [`pytorch/test_all.py`](./pytorch/test_all.py) |
+
+```bash
+cd pytorch
+python test_all.py           # PyTorch 版 25+ 项测试
+python multi_head_attention.py  # 可独立运行
+```
+
+两版对比可以直观感受框架封装 vs 手写的差异：PyTorch 版代码量更少（`nn.Linear` / `F.softmax` 替代手写）、支持自动微分、可跑在 GPU 上；NumPy 版每一步运算都暴露在外，适合理解原理。
+
 ---
 
 ### 运行示例
@@ -217,11 +239,11 @@ utils.py ← 所有文件从这里 import
 
 ## 后续计划
 
+- [x] PyTorch 版实现（pytorch/ 目录，与 NumPy 版一一对应）
 - [ ] 交叉注意力（Cross-Attention）— Encoder-Decoder 架构
 - [ ] KV Cache 的进一步优化：PagedAttention、MQA、GQA
 - [ ] Flash Attention 原理与数值对比
 - [ ] RoPE（旋转位置编码）实现
-- [ ] PyTorch 版对比（相同逻辑用 PyTorch 写一遍）
 
 ## License
 
