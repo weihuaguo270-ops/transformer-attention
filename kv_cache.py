@@ -1,186 +1,78 @@
 """
-KV Cache — 自回归生成中的推理加速
+KV Cache — 模拟自回归生成循环（与 pytorch/ 版对应）
 
 面试高频题: "为什么 LLM 生成时第一个字慢，后面越来越快？"
 
-核心观察:
-  自回归生成时，每步只产生 1 个新词。
-  旧词的 K 和 V 在后续步骤中不会变，但会被重新计算多次。
+对比：
+  有缓存：每步只算新词的 K、V，拼到缓存后面 → 每步计算量恒定
+  无缓存：每步重新算所有词的 K、V → 计算量线性增长
 
-  无缓存: 每步对所有词重新算 Q/K/V → O(N²) 计算量
-  有缓存: 每步只算新词的 Q/K/V，存 K/V 供后续复用 → O(N) 计算量
-
-为什么不缓存 Q?
-  旧 Q 在后续步骤中不再被需要（旧词不会作为"查询者"再次出现）。
-  旧 K/V 一直被需要（新词需要匹配所有旧 K，加权所有旧 V）。
+核心:
+  无缓存: O(N²)
+  有缓存: O(N)
 """
+
 import numpy as np
-from utils import softmax
 
 
-# ============================================================
-# 1. 设定场景
-# ============================================================
-# 模拟生成 4 个词的过程
-# 每个词用 4 维向量，Q/K/V 投影到 3 维
-np.random.seed(42)
+def generate(num_steps, use_cache=True, d_k=4):
+    """模拟自回归生成，追踪每步计算量
 
-# 模拟的输入 embedding: 相邻词之间有些许重叠，模拟语义相似
-embeddings = {
-    0: np.array([1.0, 0.5, 0.0, 0.0]),    # 词0
-    1: np.array([0.5, 1.0, 0.5, 0.0]),    # 词1
-    2: np.array([0.0, 0.5, 1.0, 0.5]),    # 词2
-    3: np.array([0.0, 0.0, 0.5, 1.0]),    # 词3
-}
-
-d_model = 4   # 输入维度
-d_k = 3       # Q/K/V 目标维度
-
-# Q/K/V 权重矩阵（随机初始化，演示用）
-Wq = np.random.randn(d_model, d_k)  # (4, 3)
-Wk = np.random.randn(d_model, d_k)  # (4, 3)
-Wv = np.random.randn(d_model, d_k)  # (4, 3)
-
-print("=" * 60)
-print("KV Cache 演示：逐步生成 4 个词")
-print("=" * 60)
-
-# ============================================================
-# 2. 无 KV Cache 版本（每次从头算全部）
-# ============================================================
-print("\n--- 无 KV Cache：每次重新算所有词的 Attention ---")
-
-def generate_no_cache(num_tokens):
+    参数:
+        num_steps: 生成的 token 数
+        use_cache: True=用KV Cache，False=每次都重新算全部
+        d_k: 向量维度
     """
-    朴素方式：每步生成时，对已有的全部词重新算 Attention
+    np.random.seed(42)
 
-    问题:
-      第 1 步: 算 K₀ V₀
-      第 2 步: 算 K₀ V₀ + K₁ V₁  ← K₀ V₀ 重复了
-      第 3 步: 算 K₀ V₀ + K₁ V₁ + K₂ V₂  ← K₀V₀ K₁V₁ 重复了
-      ...
-      重复计算随着生成长度 N 呈 O(N²) 增长
-    """
-    for step in range(num_tokens):
-        # 当前已有的全部输入
-        tokens = [embeddings[i] for i in range(step + 1)]
-        X = np.array(tokens)  # (step+1, 4)
-        #         ↑ 注意: step=0 时 shape (1,4); step=1 时 shape (2,4)
+    # 首个 token（Prompt 阶段）
+    _ = np.random.randn(d_k)   # 首个 token 的 embedding
 
-        # 重新算所有词的 Q/K/V（包括旧词）
-        Q = X @ Wq  # (step+1, 3)
-        K = X @ Wk  # (step+1, 3)
-        V = X @ Wv  # (step+1, 3)
+    K_cache, V_cache = None, None
 
-        # Attention（带因果掩码）
-        seq_len = step + 1
-        scores = Q @ K.T / np.sqrt(d_k)
-        mask = np.triu(np.ones((seq_len, seq_len)), k=1) * -1e9
-        masked_scores = scores + mask
-        attn_weights = softmax(masked_scores)
+    print(f"{'步数':>5} | {'缓存K数量':>8} | {'本次算K数量':>8} | {'总计算量(算K次数)':>15}")
+    print("-" * 55)
 
-        # 只取最后一个词的输出作为预测结果
-        # output[0..step-1] 是旧词的结果，被丢弃了
-        output = attn_weights @ V
-        # predicted = output[-1]  # 新词的预测结果
+    for step in range(num_steps):
+        if use_cache:
+            # 有缓存：只算当前 1 个 token 的 K、V
+            k_cur = np.random.randn(1, d_k)
+            v_cur = np.random.randn(1, d_k)
+            num_k_computed = 1
 
-        print(f"  第{step+1}步: 已有{step+1}个词, 重新算了{step+1}个Q, {step+1}个K, {step+1}个V")
+            if K_cache is None:
+                K_cache, V_cache = k_cur, v_cur
+            else:
+                K_cache = np.concatenate([K_cache, k_cur], axis=0)
+                V_cache = np.concatenate([V_cache, v_cur], axis=0)
+        else:
+            # 无缓存：全部重算 step+2 个（首个 token + 当前步）
+            num_k_computed = step + 2
+            K_cache = np.random.randn(step + 2, d_k)
+            V_cache = np.random.randn(step + 2, d_k)
 
-generate_no_cache(4)
+        cache_size = 0 if K_cache is None else K_cache.shape[0]
 
-# ============================================================
-# 3. 有 KV Cache 版本（只算新词的 Q，复用旧的 K/V）
-# ============================================================
-print("\n--- 有 KV Cache：只算新词的 Q，旧的 K/V 存起来复用 ---")
+        total = (step + 2) if not use_cache else num_k_computed
+        print(f"{step+1:>5} | {cache_size:>8} | {num_k_computed:>8} | {total:>15}")
 
-def generate_with_cache(num_tokens):
-    """
-    优化方式：每步只算新词的 Q/K/V，K/V 存到缓存中
+    print("-" * 55)
+    total_no_cache = sum(range(2, num_steps + 2))
+    print(f"\n生成 {num_steps} 个 token 的总结：")
+    print(f"  用缓存: total K 计算次数 = {num_steps}（每步1次）")
+    print(f"  不用缓存: total K 计算次数 = {total_no_cache}（第t步算t+1次）")
+    print(f"  节省: {total_no_cache - num_steps} 次 K、V 计算")
 
-    关键区别:
-      - 第 2 步: 只算词1 的 Q₁K₁V₁, K₀V₀ 从缓存拿
-      - 第 3 步: 只算词2 的 Q₂K₂V₂, K₀V₀K₁V₁ 从缓存拿
-      - 每步只算 1 个词的 Q/K/V，跟总词数无关
 
-    为什么缓存 K 和 V 而不是 Q?
-      - 新词 (Q_new) 需要匹配所有旧 K → 旧 K 必须留着
-      - 新词 (注意力权重) 需要乘以所有旧 V → 旧 V 必须留着
-      - 旧 Q 只用于旧词自己的查询，生成后不再被需要 → 不缓存
-    """
-    cache_k = []  # K 缓存列表
-    cache_v = []  # V 缓存列表
+if __name__ == "__main__":
+    num_steps = 5
 
-    for step in range(num_tokens):
-        # 取当前词的 embedding，reshape 成 (1, d_model) 用于矩阵乘法
-        token = embeddings[step]
-        x = token.reshape(1, -1)  # (1, 4)
-        #   ↑ reshape 的作用:
-        #     token shape (4,) → 一维数组，不能 @ Wq
-        #     x shape (1, 4)  → 二维矩阵，可以 @ Wq
+    print("=" * 55)
+    print("KV Cache 自回归生成模拟")
+    print("=" * 55)
 
-        # 只算当前这个词的 Q/K/V（不是全部）
-        q_new = x @ Wq  # (1, 3)
-        k_new = x @ Wk  # (1, 3)
-        v_new = x @ Wv  # (1, 3)
+    print("\n>>> 使用 KV Cache:")
+    generate(num_steps, use_cache=True)
 
-        # 把新的 K/V 追加到缓存
-        cache_k.append(k_new)
-        cache_v.append(v_new)
-
-        # 从缓存拿出全部 K/V（直接拼接，不用重新算）
-        K_all = np.concatenate(cache_k, axis=0)  # (step+1, 3)
-        V_all = np.concatenate(cache_v, axis=0)  # (step+1, 3)
-
-        # Attention: 只用新词的 Q 去匹配缓存的全部 K
-        # Q shape: (1, 3), K_all shape: (step+1, 3)
-        # scores shape: (1, step+1) — 只需 1 行
-        scores = q_new @ K_all.T / np.sqrt(d_k)
-        attn_weights = softmax(scores)
-        output = attn_weights @ V_all  # (1, 3)
-
-        # 汇报: 新算了多少 vs 复用了多少
-        q_count = 1
-        k_count = step + 1
-        reused_from_cache = step
-        print(f"  第{step+1}步: 新算 {q_count} 个Q, {q_count} 个K, {q_count} 个V")
-        print(f"           从缓存复用 {reused_from_cache} 个K, {reused_from_cache} 个V")
-
-generate_with_cache(4)
-
-# ============================================================
-# 4. 计算量对比
-# ============================================================
-print("\n" + "=" * 60)
-print("计算量对比（生成长度 = N）")
-print("=" * 60)
-
-def compute_flops_no_cache(N, d):
-    """无缓存：每步重新算所有词的 QKV + Attention"""
-    total_qkv = 0
-    total_attn = 0
-    for step in range(N):
-        seq_len = step + 1
-        total_qkv += 3 * seq_len * d * d   # 3 个矩阵乘 (Q/K/V)
-        total_attn += seq_len * seq_len * d  # Attention 分数 + 加权求和
-    return total_qkv + total_attn
-
-def compute_flops_with_cache(N, d):
-    """有缓存：每步只算 1 个新词的 Q/K/V"""
-    total_qkv = 0
-    total_attn = 0
-    for step in range(N):
-        total_qkv += 3 * d * d              # 每次只算 1 个词的 Q/K/V
-        total_attn += (step + 1) * d        # 1 个 Q 匹配 step+1 个 K
-    return total_qkv + total_attn
-
-print(f"\n{'N':>6} {'无缓存':>10} {'有缓存':>10} {'加速比':>8}")
-print("-" * 38)
-for N in [4, 10, 100, 1000]:
-    no_cache = compute_flops_no_cache(N, d_k)
-    with_cache = compute_flops_with_cache(N, d_k)
-    speedup = no_cache / with_cache
-    print(f"{N:>6} {no_cache:>10,} {with_cache:>10,} {speedup:>7.1f}x")
-print()
-print("结论: N 越大加速越明显。无缓存 O(N²) → 有缓存 O(N)")
-print("这就是 LLM 生成时'第一个字慢，后面越来越快'的根本原因")
-print("（第 1 步没有缓存 + Prefill 阶段要处理全部 prompt）")
+    print("\n>>> 不使用 KV Cache:")
+    generate(num_steps, use_cache=False)
