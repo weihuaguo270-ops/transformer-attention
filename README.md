@@ -118,7 +118,7 @@ python test_all.py
 | Encoder-Decoder | `encoder_decoder.py` | [`pytorch/encoder_decoder.py`](./pytorch/encoder_decoder.py) |
 | 测试 | `test_all.py` | [`pytorch/test_all.py`](./pytorch/test_all.py) |
 | 训练 | — | [`pytorch/train_transformer.py`](./pytorch/train_transformer.py) |
-| **位置编码对比** | — | [`pytorch/compare_pos_encoding.py`](./pytorch/compare_pos_encoding.py) |
+| 位置编码对比 | — | [`pytorch/compare_pos_encoding.py`](./pytorch/compare_pos_encoding.py) |
 
 ```bash
 cd pytorch
@@ -236,7 +236,7 @@ PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
 
 **核心特征：** 位置信息**独立于 Attention 计算**，通过加法注入。
 
-#### 5b. RoPE（`rotary.py`）— 新增
+#### 5b. RoPE（`rotary.py`）
 
 相对位置编码：不生成位置向量，而是旋转 Q 和 K，让 Attention 分数本身包含位置差信息。
 
@@ -264,7 +264,7 @@ block = TransformerBlock(d_model=8, num_heads=2, d_ff=16, pos_encoding="rope")
 block.forward(x)  # → 不加 PE，Attention 内部旋转 Q/K → FFN
 ```
 
-#### 5d. 对比实验（`pytorch/compare_pos_encoding.py`）— 新增
+#### 5d. 对比实验（`pytorch/compare_pos_encoding.py`）
 
 在同一训练任务上，分别用 Sinusoidal PE 和 RoPE 训练 Transformer，打印 loss/acc 曲线对比。
 
@@ -380,8 +380,8 @@ pytorch/ 目录 ← 与根目录结构完全对应，每个文件有 PyTorch 版
 - [x] PyTorch 版实现（pytorch/ 目录，与 NumPy 版一一对应）
 - [x] PyTorch 训练流程（LM Head + Teacher Forcing 训练）
 - [x] 交叉注意力（Cross-Attention）— Encoder-Decoder 架构
-- [x] **RoPE（旋转位置编码）实现** — `rotary.py` + `transformer_block` 可切换
-- [x] **位置编码对比实验** — `pytorch/compare_pos_encoding.py`
+- [x] RoPE（旋转位置编码）实现 — `rotary.py` + `transformer_block` 可切换
+- [x] 位置编码对比实验 — `pytorch/compare_pos_encoding.py`
 - [ ] PyTorch 实战：加载真实数据集训练语言模型
 - [ ] KV Cache 的进一步优化：PagedAttention、MQA、GQA
 - [ ] Flash Attention 原理与数值对比
