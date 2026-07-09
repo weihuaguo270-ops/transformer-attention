@@ -5,10 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "attention-from-scratch"
 version = "0.1.0"
-description = "纯 NumPy 实现 Transformer Attention 机制 — 从零手写"
+description = "纯 NumPy + PyTorch 手写 Transformer Attention 机制 — Self-Attention、因果掩码、多头注意力、KV Cache、位置编码、完整 Transformer Block"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 dependencies = [
     "numpy",
+]
+
+[project.optional-dependencies]
+pytorch = [
+    "torch>=2.0",
 ]

@@ -7,6 +7,7 @@ PyTorch 版多头注意力 — 与 NumPy 版 multi_head_attention.py 对应
   use_rope=False (默认): Sinusoidal PE 由调用者在外部加
   use_rope=True:          在 Q/K 拆头后旋转每个 head
 """
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import torch
 import torch.nn as nn
 from pytorch.utils import softmax, split_heads, combine_heads

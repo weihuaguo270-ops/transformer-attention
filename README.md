@@ -49,14 +49,18 @@ pip install numpy
 
 ### 运行
 
-按顺序阅读代码，每个文件独立可运行：
+## 快速开始
 
 ```bash
-# 1. Self-Attention 原理
-python attention.py
+# 1. 安装依赖
+pip install numpy
 
-# 2. 多头注意力（支持 RoPE 切换）
-python multi_head_attention.py
+# （可选）如需运行 PyTorch 版
+pip install torch
+
+# 2. 运行（任意一个）
+# 单头 Self-Attention + 因果掩码
+python attention.py
 
 # 3. KV Cache 推理加速（含速度对比）
 python kv_cache.py

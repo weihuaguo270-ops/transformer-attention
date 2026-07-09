@@ -3,6 +3,7 @@ PyTorch 版 Cross-Attention（交叉注意力）— 与 NumPy 版对应
 
 Q 来自 query 序列，K/V 来自 key_value 序列。
 """
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import torch
 import torch.nn as nn
 from pytorch.utils import softmax, split_heads, combine_heads
