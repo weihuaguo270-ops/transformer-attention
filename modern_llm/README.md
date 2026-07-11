@@ -1,8 +1,9 @@
 # 现代 LLM 架构（2023-2024）
 
 > `modern_llm/` — 纯 NumPy 实现，覆盖当前主流大模型使用的 Attention 变体。
-
-从 **Llama 2/3** 的 GQA + RMSNorm + SwiGLU，到 **DeepSeek V2/V3** 的 MLA，展示原始 Transformer 如何演进为今天的大规模生产架构。
+>
+> 包含 Llama 路线（GQA + RMSNorm + SwiGLU）和 DeepSeek 路线（MLA）两大类方案。
+> 两条路线从原始 Transformer 分叉而来，解决不同层面的优化问题。
 
 独立包，不依赖 `np_impl/` 目录。
 

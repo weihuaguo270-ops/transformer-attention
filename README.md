@@ -1,28 +1,40 @@
 # Attention From Scratch
 
-> 从零实现 Attention 机制，完整覆盖三**代**架构演进。
+> 从零实现 Attention 机制，覆盖从原始 Transformer 到现代 LLM 架构的两条演进路线。
 >
-> 项目划分为**两个独立目录**，每代架构独立运行、互不依赖：
+> 项目划分为**两个独立目录**，互不依赖：
 >
-> - **`np_impl/`** — 第一代：原始 Transformer（2017）
-> - **`modern_llm/`** — 第二/三代：现代 LLM 架构（2023-2024）
+> - **`np_impl/`** — 原始 Transformer（2017），共同起点
+> - **`modern_llm/`** — 现代方案合集（GQA / Llama Block / DeepSeek MLA）
 
-## 架构演进
+## 两条演进路线
+
+原始 Transformer（2017）是共同的起点。此后主流 LLM 分两条路线演进：
 
 ```
-                    Attention 机制演进
-
-   第一代 (2017)          第二代 (2023)          第三代 (2024)
-   ─────────────         ─────────────          ─────────────
-   Transformer 原文       Llama / Mistral        DeepSeek V2/V3
-
-   Self-Attention        Grouped Query Attn     Multi-head Latent
-   Multi-Head Attn        (GQA)                   Attention (MLA)
-   Sinusoidal PE         RoPE                   潜空间 KV 压缩
-   Post-Norm             RMSNorm + Pre-Norm     吸收矩阵技巧
-   ReLU FFN              SwiGLU FFN
-   Encoder-Decoder       Decoder-only
+              原始 Transformer（2017）
+              /                    \
+        Llama 路线               DeepSeek 路线
+  (GQA + Pre-Norm + SwiGLU)    (MLA 潜空间压缩)
+       2023-2024                   2024
 ```
+
+两条路线解决不同的问题：
+
+| 路线 | 核心痛点 | 方案 |
+|------|---------|------|
+| **Llama 路线** | 模型堆不深、KV Cache 太大 | GQA + Pre-Norm + RMSNorm + SwiGLU + RoPE |
+| **DeepSeek 路线** | KV Cache 仍是瓶颈（236B 模型无法部署） | MLA：K/V 压缩到潜空间，缓存降至 ~2% |
+
+两条路线不互斥——理论上一家公司可以同时用 GQA + MLA。实际上 GQA 和 MLA 解决的是同一问题的不同层次，可以叠加使用。
+
+项目结构对应：
+
+| 目录 | 内容 | 对应路线 |
+|------|------|---------|
+| `np_impl/` | 原始 Transformer | 共同起点 |
+| `modern_llm/` | GQA + Llama Block + MLA | 两条路线的现代方案合集 |
+| `pytorch/` | 框架工程版 | — |
 
 ---
 
