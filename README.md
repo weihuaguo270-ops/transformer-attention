@@ -42,22 +42,28 @@ self_attention/
 │   ├── encoder_block.py       Encoder Block
 │   ├── encoder_decoder.py     Encoder-Decoder 完整架构
 │   ├── utils.py               公共工具函数
-│   └── test.py                独立测试（36+ 项）
+│   ├── test.py                独立测试（36+ 项）
+│   └── README.md              ← 本目录详细说明
 │
 ├── modern_llm/                 ← 第二/三代：现代 LLM 架构（2023-2024）
 │   ├── gqa.py                 Grouped Query Attention
-│   ├── llama_block.py         Llama Decoder Block（RMSNorm + SwiGLU + GQA + RoPE + Pre-Norm）
-│   ├── mla.py                 Multi-head Latent Attention（DeepSeek V2 核心创新）
-│   ├── utils.py               独立工具函数（不依赖 np_impl/）
-│   ├── rotary.py              独立 RoPE（不依赖 np_impl/）
-│   └── test.py                独立测试（15+ 项）
+│   ├── llama_block.py         Llama Decoder Block
+│   ├── mla.py                 Multi-head Latent Attention
+│   ├── utils.py               独立工具函数
+│   ├── rotary.py              独立 RoPE
+│   ├── test.py                独立测试（15+ 项）
+│   └── README.md              ← 本目录详细说明
 │
-├── pytorch/                    PyTorch 版（与 np_impl/ 镜像）
+├── pytorch/                    ← PyTorch 版（与 np_impl/ 镜像）
 ├── test_all.py                 统一测试入口
 ├── pyproject.toml
 ├── docs/
 └── README.md
 ```
+
+> 💡 每个子目录有自己的 README，详细说明该目录的模块和用法：
+> - 原始 Transformer → [`np_impl/README.md`](./np_impl/README.md)
+> - 现代 LLM 架构 → [`modern_llm/README.md`](./modern_llm/README.md)
 
 ---
 
