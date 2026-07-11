@@ -89,4 +89,7 @@ rotary.py       ← RoPE（独立）
   ├── gqa.py    ← GQA（引用 utils + rotary）
   │   └── llama_block.py  ← Llama Block（引用 gqa）
   └── mla.py    ← MLA（引用 utils + rotary）
-```
+
+---
+
+> 🔄 框架工程实践版 → [`pytorch/README.md`](../pytorch/README.md)

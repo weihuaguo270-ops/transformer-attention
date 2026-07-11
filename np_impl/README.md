@@ -69,3 +69,7 @@ cross_attention.py    ← 只依赖 utils.py
 encoder_block.py      ← 依赖 multi_head_attention.py
 encoder_decoder.py    ← 依赖 encoder_block + cross_attention
 ```
+
+---
+
+> 🔄 框架工程实践版 → [`pytorch/README.md`](../pytorch/README.md)

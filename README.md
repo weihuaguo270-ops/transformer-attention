@@ -55,6 +55,7 @@ self_attention/
 │   └── README.md              ← 本目录详细说明
 │
 ├── pytorch/                    ← PyTorch 版（与 np_impl/ 镜像）
+│   ├── README.md              ← 本目录详细说明
 ├── test_all.py                 统一测试入口
 ├── pyproject.toml
 ├── docs/
@@ -64,6 +65,7 @@ self_attention/
 > 💡 每个子目录有自己的 README，详细说明该目录的模块和用法：
 > - 原始 Transformer → [`np_impl/README.md`](./np_impl/README.md)
 > - 现代 LLM 架构 → [`modern_llm/README.md`](./modern_llm/README.md)
+> - PyTorch 框架版 → [`pytorch/README.md`](./pytorch/README.md)
 
 ---
 
