@@ -1,14 +1,16 @@
 # 对比实验
 
-> 对 `modern_llm/` 中各模块的横向对比，产出可量化的数字。
+> 对 `modern_llm/` 中各模块的横向对比，以及超参数训练实验记录。
 
 ## 实验列表
 
-| 实验 | 文件 | 对比内容 | 产出 |
-|------|------|---------|------|
+| 实验 | 文件/目录 | 对比内容 | 产出 |
+|------|----------|---------|------|
 | Attention 变体对比 | `compare_attention.py` | MHA vs GQA(8KV) vs GQA(4KV) vs MQA vs MLA | KV Cache 大小、参数量、60层推估 |
 | KV Cache 策略对比 | `compare_cache.py` | 完整缓存 vs StreamingLLM（不同窗口） | 缓存节省量、输出质量差异 |
 | 解码策略对比 | `compare_decoding.py` | 标准自回归 vs Spec Decoding | 加速比、接受率、Gamma 影响 |
+| 超参数对比 | `compare_training.py` | 不同 d_model / lr 组合的训练效果 | Loss 曲线、PPL、生成文本 |
+| 实验记录 | `runs/compare.py` | 查看、筛选、对比所有历史实验 | 一键交互式对比 |
 
 ## 运行
 
@@ -23,6 +25,12 @@ python -m experiments.compare_cache
 
 # 解码策略对比
 python -m experiments.compare_decoding
+
+# 超参数对比
+python -m experiments.compare_training
+
+# 查看所有历史实验记录（交互式）
+python -m experiments.runs.compare
 ```
 
 ## 关键结论

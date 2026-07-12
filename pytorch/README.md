@@ -19,6 +19,17 @@
 | Encoder-Decoder | `np_impl/encoder_decoder.py` | `encoder_decoder.py` | — |
 | 测试 | `np_impl/test.py` | `test_all.py` | 25+ 项测试 |
 
+## PyTorch 独有模块
+
+以下模块在 `modern_llm/` 中有 NumPy 版，在 `pytorch/` 下有对应的 PyTorch 版：
+
+| 模块 | 文件 | 用途 |
+|------|------|------|
+| GQA | `gqa.py` | Grouped Query Attention（支持 RoPE） |
+| Llama Block | `llama_block.py` | RMSNorm + SwiGLU + GPT 完整模型 |
+| 训练 | `train_gpt.py` | 在 TinyStories 上训练，支持命令行参数和交互式配置 |
+| 数据 | `data.py` | TinyStories 加载、词表构建、encode/decode |
+
 ## PyTorch 版独有内容
 
 ### 训练流程（`train_transformer.py`）
@@ -60,11 +71,14 @@ pip install torch
 # 测试全部模块
 cd pytorch && python test_all.py
 
-# 训练
-cd pytorch && python train_transformer.py
+# 训练 GPT（交互式配置）
+python -m pytorch.train_gpt
 
-# 对比实验
-cd pytorch && python compare_pos_encoding.py
+# 训练 GPT（命令行参数）
+python -m pytorch.train_gpt --d_model 128 --lr 1e-4 --epochs 50 --tag my-test
+
+# 训练 + 对比实验（自动记录到 experiments/runs/）
+python -m pytorch.train_gpt --tag lr-test --lr 1e-3 --epochs 30
 ```
 
 ## 跟 `np_impl/` 的对照价值

@@ -70,6 +70,13 @@ self_attention/
 │   ├── compare_attention.py    MHA vs GQA vs MLA 缓存/参数量
 │   ├── compare_cache.py        完整缓存 vs StreamingLLM 质量/节省
 │   ├── compare_decoding.py     标准 vs Spec Decoding 加速比
+│   ├── compare_training.py     超参数训练效果对比
+│   ├── runs/                   实验记录系统（自动存档 + 交互式对比）
+│   │   ├── compare.py          一键查看/筛选/对比所有实验
+│   │   ├── README.md
+│   │   ├── legacy_001_baseline/
+│   │   ├── legacy_005_early_stop/
+│   │   └── 20260712_..._auto/  （每次训练自动生成）
 │   └── README.md
 ├── pytorch/                    ← PyTorch 版（与 np_impl/ 镜像）
 │   ├── README.md              ← 本目录详细说明
