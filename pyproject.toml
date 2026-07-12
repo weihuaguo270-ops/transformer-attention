@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "attention-from-scratch"
+name = "transformer-attention"
 version = "0.1.0"
 description = "纯 NumPy + PyTorch 手写 Transformer Attention 机制 — Self-Attention、因果掩码、多头注意力、KV Cache、位置编码、完整 Transformer Block"
 readme = "README.md"
