@@ -6,6 +6,8 @@
 >
 > - **`np_impl/`** — 原始 Transformer（2017），共同起点
 > - **`modern_llm/`** — 现代方案合集（GQA / Llama Block / DeepSeek MLA）
+> - **`pytorch/`** — 框架工程版，含 GQA / Llama Block 的 nn.Module 实现，
+>   完整 GPT 训练 pipeline（TinyStories 数据集 + 命令行调参 + 自动实验记录）
 
 ## 两条演进路线
 
@@ -78,8 +80,13 @@ self_attention/
 │   │   ├── legacy_005_early_stop/
 │   │   └── 20260712_..._auto/  （每次训练自动生成）
 │   └── README.md
-├── pytorch/                    ← PyTorch 版（与 np_impl/ 镜像）
-│   ├── README.md              ← 本目录详细说明
+├── pytorch/                    ← PyTorch 版 — 从原理到训练的全流程实现
+│   ├── gqa.py                  GQA + RoPE（PyTorch 版）
+│   ├── llama_block.py          RMSNorm + SwiGLU + 完整 GPT 模型
+│   ├── train_gpt.py            训练脚本（交互式/命令行，自动记录实验）
+│   ├── data.py                 TinyStories 数据加载 + 词表构建
+│   ├── attention.py ...        np_impl 各模块的 PyTorch 镜像
+│   └── README.md              ← 本目录详细说明
 ├── test_all.py                 统一测试入口
 ├── pyproject.toml
 ├── docs/
