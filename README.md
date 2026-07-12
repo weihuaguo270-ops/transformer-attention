@@ -170,8 +170,8 @@ python -m modern_llm.test      # 现代 LLM：15+ 项
 
 ## 相关项目
 
-- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — 生产级 LLM 评估框架，支持 Process Reward 评分
-- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — 生产级 ReAct Agent 框架
+- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — LLM 评估框架，支持 Process Reward 评分
+- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 框架
 
 ## License
 
