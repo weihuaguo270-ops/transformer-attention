@@ -1,10 +1,10 @@
 {
-  "best_val_loss": 5.28,
+  "best_val_loss": 4.6288,
   "best_epoch": null,
-  "final_train_loss": 2.23,
-  "final_val_loss": 5.28,
-  "perplexity": null,
+  "final_train_loss": 2.2459,
+  "final_val_loss": 5.1179,
+  "perplexity": 166.42,
   "epochs_actual": 20,
-  "generated": "once upon a time very very whipped in a small at the little girl and said, around the little",
-  "notes": "best_epoch=null: 由compare_training.py生成，未追踪逐轮最佳epoch；perplexity=null: 该对比实验未计算困惑度"
+  "generated": "once upon a time there was an tray. the backyard. it. it. the toy.",
+  "notes": "已重新生成，包含完整指标（best_epoch仍为null，对比实验未追踪逐轮数据）"
 }

@@ -88,6 +88,20 @@ def train_one_config(name, d_model=64, num_layers=4, dropout=0.0,
     from pytorch.data import decode
     sample = decode(output_ids[0].tolist(), idx2word)
 
+    # 计算困惑度
+    model.eval()
+    total_loss = 0
+    total_tokens = 0
+    with torch.no_grad():
+        for x, y in val_loader:
+            x, y = x.to(device), y.to(device)
+            logits = model(x)
+            loss = criterion(logits.view(-1, vocab_size), y.view(-1))
+            non_pad = (y != 0).sum().item()
+            total_loss += loss.item() * non_pad
+            total_tokens += non_pad
+    perplexity = float(torch.exp(torch.tensor(total_loss / max(total_tokens, 1))).item())
+
     return {
         "name": name,
         "train_loss": train_losses,
@@ -95,6 +109,9 @@ def train_one_config(name, d_model=64, num_layers=4, dropout=0.0,
         "sample": sample,
         "params": sum(p.numel() for p in model.parameters()),
         "vocab": vocab_size,
+        "best_val_loss": round(min(val_losses), 4),
+        "perplexity": round(perplexity, 2),
+        "epochs_actual": epochs,
     }
 
 
@@ -150,3 +167,37 @@ if __name__ == "__main__":
         print(f"  完成: params={r['params']:,}")
 
     print_results(results)
+
+    # 保存到 experiments/runs/
+    import json
+    runs_dir = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "experiments", "runs")
+    existing = [d for d in os.listdir(runs_dir) if os.path.isdir(os.path.join(runs_dir, d))
+                and d[0].isdigit()]
+    next_id = max([int(d[:3]) for d in existing]) + 1 if existing else 1
+
+    for r in results:
+        exp_dir = os.path.join(runs_dir, f"{next_id:03d}_{r['name'][0]}")
+        os.makedirs(exp_dir, exist_ok=True)
+
+        with open(os.path.join(exp_dir, "config.json"), "w") as f:
+            json.dump({
+                "desc": r["name"],
+                "d_model": 32 if "小模型" in r["name"] else 64,
+                "lr": 1e-3 if "低LR" in r["name"] else (1e-2 if "高LR" in r["name"] else 3e-3),
+                "epochs": 20, "batch_size": 8,
+            }, f, indent=2, ensure_ascii=False)
+
+        with open(os.path.join(exp_dir, "results.json"), "w") as f:
+            json.dump({
+                "best_val_loss": r["best_val_loss"],
+                "best_epoch": None,
+                "final_train_loss": round(r["train_loss"][-1], 4),
+                "final_val_loss": round(r["val_loss"][-1], 4),
+                "perplexity": r["perplexity"],
+                "epochs_actual": r["epochs_actual"],
+                "generated": r["sample"],
+                "notes": "由compare_training.py重新生成（含困惑度）",
+            }, f, indent=2, ensure_ascii=False)
+
+        print(f"  📝 已保存: {exp_dir}")

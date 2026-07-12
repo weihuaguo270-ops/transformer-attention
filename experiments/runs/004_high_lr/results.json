@@ -1,10 +1,10 @@
 {
-  "best_val_loss": 6.85,
+  "best_val_loss": 4.6962,
   "best_epoch": null,
-  "final_train_loss": 0.68,
-  "final_val_loss": 6.85,
-  "perplexity": null,
+  "final_train_loss": 1.0642,
+  "final_val_loss": 6.4542,
+  "perplexity": 606.24,
   "epochs_actual": 20,
-  "generated": "once upon a time there was a named tim. tim named tom. tom loved to his and her had",
-  "notes": "best_epoch=null: 由compare_training.py生成，未追踪逐轮最佳epoch；perplexity=null: 该对比实验未计算困惑度"
+  "generated": "once upon a time with time, tim wanted to find a the",
+  "notes": "已重新生成，包含完整指标（best_epoch仍为null，对比实验未追踪逐轮数据）"
 }
