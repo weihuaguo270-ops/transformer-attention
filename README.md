@@ -66,6 +66,11 @@ self_attention/
 │   ├── test.py                独立测试（15+ 项）
 │   └── README.md              ← 本目录详细说明
 │
+├── experiments/                ← 对比实验（横向比较各模块）
+│   ├── compare_attention.py    MHA vs GQA vs MLA 缓存/参数量
+│   ├── compare_cache.py        完整缓存 vs StreamingLLM 质量/节省
+│   ├── compare_decoding.py     标准 vs Spec Decoding 加速比
+│   └── README.md
 ├── pytorch/                    ← PyTorch 版（与 np_impl/ 镜像）
 │   ├── README.md              ← 本目录详细说明
 ├── test_all.py                 统一测试入口
