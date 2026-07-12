@@ -1,172 +1,175 @@
 # Attention From Scratch
 
-**NumPy/PyTorch implementation of Transformer attention mechanisms** — covering the full evolution from the original 2017 Transformer to modern LLM architectures including GQA, Llama Block, DeepSeek MLA, Speculative Decoding, and Attention Sinks.
+**NumPy/PyTorch 实现的 Transformer Attention 机制全集** — 涵盖从 2017 年原始 Transformer 到现代 LLM 架构（GQA、Llama Block、DeepSeek MLA、Speculative Decoding、Attention Sinks）的完整演进。
 
-## Architecture
+## 架构
 
-The repository tracks two independent evolutionary paths from the original Transformer (2017):
+项目追踪原始 Transformer 之后的两条独立演进路线：
 
-![Architecture Diagram](docs/modules_overview.excalidraw)
+```
+原始 Transformer（2017）
+       /                     Llama 路线               DeepSeek 路线
+(GQA + Pre-Norm +       (MLA 潜空间压缩)
+ SwiGLU + RoPE)
+    2023-2024               2024
+```
 
-| Directory | Coverage |
-|-----------|----------|
-| [`np_impl/`](np_impl/README.md) | Original Transformer (2017) in NumPy |
-| [`modern_llm/`](modern_llm/README.md) | GQA, Llama Block, MLA, Spec Decoding, StreamingLLM in NumPy |
-| [`pytorch/`](pytorch/README.md) | PyTorch GQA + Llama Block + GPT training pipeline with experiment tracking |
-| [`experiments/`](experiments/README.md) | Side-by-side comparisons of attention variants, KV strategies, decoding methods |
+| 目录 | 覆盖内容 |
+|------|----------|
+| [`np_impl/`](np_impl/README.md) | 原始 Transformer（2017）NumPy 实现 |
+| [`modern_llm/`](modern_llm/README.md) | GQA、Llama Block、MLA、Spec Decoding、StreamingLLM |
+| [`pytorch/`](pytorch/README.md) | PyTorch GQA + Llama Block + GPT 训练 pipeline + 实验记录 |
+| [`experiments/`](experiments/README.md) | Attention 变体 / KV 策略 / 解码 / 超参数对比实验 |
 
-## Project Structure
+## 项目结构
 
 ```
 attention-from-scratch/
 │
-├── np_impl/                    # Original Transformer (NumPy)
-│   ├── attention.py            Single-head self-attention + causal mask
-│   ├── multi_head_attention.py Multi-Head Attention (MHA)
-│   ├── kv_cache.py             KV cache inference optimization
-│   ├── positional_encoding.py  Sinusoidal positional encoding
-│   ├── rotary.py               Rotary Position Embedding (RoPE)
-│   ├── transformer_block.py    Original decoder block (Post-Norm + ReLU)
-│   ├── cross_attention.py      Encoder-decoder cross attention
-│   ├── encoder_block.py        Encoder block
-│   ├── encoder_decoder.py      Full encoder-decoder architecture
-│   ├── utils.py                Shared utilities
-│   └── test.py                 36+ tests
+├── np_impl/                    # 原始 Transformer（NumPy）
+│   ├── attention.py            单头 Self-Attention + 因果掩码
+│   ├── multi_head_attention.py 多头注意力（MHA）
+│   ├── kv_cache.py             KV Cache 推理加速
+│   ├── positional_encoding.py  Sinusoidal 位置编码
+│   ├── rotary.py               RoPE 旋转位置编码
+│   ├── transformer_block.py    原始 Decoder Block（Post-Norm + ReLU）
+│   ├── cross_attention.py      编码器-解码器交叉注意力
+│   ├── encoder_block.py        Encoder Block
+│   ├── encoder_decoder.py      Encoder-Decoder 完整架构
+│   └── test.py                 36+ 项测试
 │
-├── modern_llm/                 # Modern LLM architectures (2023-2024)
+├── modern_llm/                 # 现代 LLM 架构（2023-2024）
 │   ├── gqa.py                  Grouped Query Attention
-│   ├── llama_block.py          Llama decoder block (Pre-Norm + RMSNorm + SwiGLU)
-│   ├── mla.py                  Multi-head Latent Attention (DeepSeek V2/V3)
-│   ├── speculative_decoding.py Speculative decoding with draft model
-│   ├── attention_sinks.py      StreamingLLM / attention sinks
-│   ├── rotary.py               RoPE (standalone)
-│   ├── utils.py                Shared utilities
-│   └── test.py                 15+ tests
+│   ├── llama_block.py          Llama Decoder Block（Pre-Norm + RMSNorm + SwiGLU）
+│   ├── mla.py                  Multi-head Latent Attention（DeepSeek V2/V3）
+│   ├── speculative_decoding.py Speculative Decoding 推理加速
+│   ├── attention_sinks.py      StreamingLLM / Attention Sinks
+│   ├── rotary.py               RoPE（独立模块）
+│   └── test.py                 15+ 项测试
 │
-├── experiments/                # Comparative experiments
-│   ├── compare_attention.py    MHA vs GQA vs MLA: cache size & parameters
-│   ├── compare_cache.py        Full cache vs StreamingLLM quality/savings
-│   ├── compare_decoding.py     Standard vs Speculative Decoding speedup
-│   ├── compare_training.py     Hyperparameter training comparison
-│   └── runs/                   Auto-logged experiments + interactive comparison tool
+├── experiments/                # 对比实验
+│   ├── compare_attention.py    MHA vs GQA vs MLA：缓存/参数量对比
+│   ├── compare_cache.py        完整缓存 vs StreamingLLM 质量/节省
+│   ├── compare_decoding.py     标准 vs Spec Decoding 加速比
+│   ├── compare_training.py     超参数训练效果对比
+│   └── runs/                   实验记录系统（自动存档 + 交互式对比工具）
 │
-├── pytorch/                    # PyTorch training pipeline
-│   ├── gqa.py                  GQA + RoPE (PyTorch nn.Module)
-│   ├── llama_block.py          RMSNorm + SwiGLU + full GPT model
-│   ├── train_gpt.py            Training script (interactive / CLI)
-│   ├── data.py                 TinyStories data loader + vocab builder
-│   └── ...                     PyTorch ports of all attention modules
+├── pytorch/                    # PyTorch 训练 pipeline
+│   ├── gqa.py                  GQA + RoPE（PyTorch nn.Module）
+│   ├── llama_block.py          RMSNorm + SwiGLU + 完整 GPT 模型
+│   ├── train_gpt.py            训练脚本（交互式/命令行，自动记录实验）
+│   ├── data.py                 TinyStories 数据加载 + 词表构建
+│   └── ...                     各模块的 PyTorch 实现
 │
-├── test_all.py                 Unified test entry point (51+ total tests)
-├── pyproject.toml
-└── docs/                       Architecture diagrams
+├── test_all.py                 统一测试入口（51+ 项）
+└── pyproject.toml
 ```
 
-## Key Implementations
+## 核心实现
 
-### MHA — Multi-Head Attention (2017)
+### MHA — Multi-Head Attention（2017）
 
-The foundation of the Transformer. Q, K, V projected to d_model, split into n_heads, scored with scaled dot-product attention.
+Transformer 的基础。Q、K、V 投影到 d_model，拆分为 n_heads，缩放点积注意力计算。
 
-**KV Cache** (`np_impl/kv_cache.py`): During autoregressive decoding, cached K/V tensors eliminate redundant recomputation of previously generated tokens, reducing per-step complexity from O(n²·d) to O(n·d).
+**KV Cache**（`np_impl/kv_cache.py`）：自回归解码时缓存 K/V 张量，避免重复计算，每步复杂度从 O(n²·d) 降至 O(n·d)。
 
-### GQA — Grouped Query Attention (2023)
+### GQA — Grouped Query Attention（2023）
 
-Used by Llama 2/3, Mistral, Qwen. Reduces K/V heads while keeping Q heads — a practical trade-off between MHA quality and MQA efficiency.
+Llama 2/3、Mistral、Qwen 等主流模型采用的方案。减少 K/V 头数同时保留 Q 头数，在 MHA 质量和 MQA 效率间取得平衡。
 
-| Variant | KV Heads | KV Cache (32h, 4096seq, FP16) | Representative Models |
-|---------|----------|-------------------------------|----------------------|
-| MHA | 32 | 64.0 MB | Original Transformer |
+| 变体 | KV 头数 | KV Cache（32h, 4096seq, FP16） | 代表模型 |
+|------|---------|-------------------------------|---------|
+| MHA | 32 | 64.0 MB | 原始 Transformer |
 | GQA | 8 | 16.0 MB | Llama 3 70B |
 | GQA | 4 | 8.0 MB | Mistral 7B |
 | MQA | 1 | 2.0 MB | Falcon |
 
 ### Llama Decoder Block
 
-Five architectural innovations over the original Transformer:
+与原始 Transformer 的 5 项关键差异：
 
-| Dimension | Original (2017) | Llama (2023) | Rationale |
-|-----------|----------------|--------------|-----------|
-| Normalization position | Post-Norm (after sublayer) | Pre-Norm (before sublayer) | Gradient flows through residual path directly |
-| Norm type | LayerNorm (μ+σ+γ+β) | RMSNorm (σ only) | 30% faster, comparable quality |
-| FFN activation | ReLU | SwiGLU (gated) | Learnable gated activation |
-| Attention mechanism | MHA (32 KV heads) | GQA (4-8 KV heads) | 75-87% KV cache reduction |
-| Position encoding | Sinusoidal PE (additive) | RoPE (rotary) | Supports length extrapolation |
-
-```
-# Original Transformer Block (Post-Norm)
-x → MHA → +residual → LayerNorm → FFN(ReLU) → +residual → LayerNorm → output
-
-# Llama Decoder Block (Pre-Norm)
-x → RMSNorm → GQA(RoPE) → +residual → RMSNorm → SwiGLU → +residual → output
-```
-
-### MLA — Multi-head Latent Attention (2024)
-
-**DeepSeek V2/V3's core innovation.** Compresses K/V into a low-dimensional latent space, reducing KV cache to approximately 2% of MHA.
+| 维度 | 原始（2017） | Llama（2023） | 改进原因 |
+|------|-------------|---------------|----------|
+| 归一化位置 | Post-Norm（子层后） | Pre-Norm（子层前） | 梯度直通残差路径，深层训练稳定 |
+| 归一化类型 | LayerNorm（μ+σ+γ+β） | RMSNorm（仅σ） | 计算快 30%，效果持平 |
+| FFN 激活 | ReLU | SwiGLU（门控） | 可学习的选择性激活 |
+| Attention | MHA（32 KV heads） | GQA（4-8 KV heads） | 节省 75-87% KV Cache |
+| 位置编码 | Sinusoidal PE（加法） | RoPE（旋转） | 支持长度外推 |
 
 ```
-MHA:   K = h · W_K,       cache K-V (d_model dim each)
-MLA:   c = h · W_DKV,     cache c (d_c dim, d_c << d_model)
-       K = c · W_UK,      V = c · W_UV (decompress from latent)
+# 原始 Transformer Block（Post-Norm）
+x → MHA → +残差 → LayerNorm → FFN(ReLU) → +残差 → LayerNorm → 输出
+
+# Llama Decoder Block（Pre-Norm）
+x → RMSNorm → GQA(RoPE) → +残差 → RMSNorm → SwiGLU → +残差 → 输出
 ```
 
-**Absorption matrix trick** — at inference time, the decompression step is elided:
+### MLA — Multi-head Latent Attention（2024）
+
+**DeepSeek V2/V3 的核心创新。** 将 K/V 压缩到低维潜空间，KV Cache 降至 MHA 的约 2%。
+
 ```
-Q · (W_UK · c) = (Q · W_UK) · c    # W_UK absorbed into Q projection
+MHA:   K = h · W_K,       缓存 K-V（d_model 维）
+MLA:   c = h · W_DKV,     缓存 c（d_c 维, d_c << d_model）
+       K = c · W_UK,       V = c · W_UV（从压缩缓存解压）
 ```
 
-Real parameters (DeepSeek V2, d_model=5120):
-- MHA per-step cache: 2 × 5120 = 10,240 dimensions
-- MLA per-step cache: 512 + 64 = 576 dimensions
-- **Compression ratio: ~18x**
+**吸收矩阵技巧**——推理时解压步骤可省略：
+```
+Q · (W_UK · c) = (Q · W_UK) · c    # W_UK 被吸收到 Q 投影中
+```
+
+实际参数（DeepSeek V2, d_model=5120）：
+- MHA 每步缓存：2 × 5120 = 10,240 维
+- MLA 每步缓存：512 + 64 = 576 维
+- **压缩比：约 18x**
 
 ### Speculative Decoding
 
-Accelerates autoregressive generation: a smaller draft model proposes K candidate tokens, then the target model verifies them in a single forward pass. Achieves 2-3x wall-clock speedup with no quality degradation.
+小模型（Draft Model）先快速生成 K 个候选 token，大模型在单次前向中并行验证。可实现 2-3x 加速且质量无损。
 
 ### Attention Sinks / StreamingLLM
 
-Maintains a small window of recent tokens plus a few initial tokens (the "attention sink") to handle sequences much longer than the training length without full KV recomputation.
+保留最近 tokens + 开头几个 tokens（attention sink），处理远超训练长度的序列，无需完整 KV 重算。
 
-## Training & Experiments
+## 训练与实验
 
-The PyTorch pipeline provides end-to-end GPT training on TinyStories:
+PyTorch pipeline 提供完整的 GPT 训练流程：
 
 ```bash
-# Train a baseline model
+# 训练 baseline
 python -m pytorch.train_gpt --epochs 3 --d_model 64 --num_heads 4
 
-# Compare GQA vs MHA
+# GQA 对比训练
 python -m pytorch.train_gpt --epochs 5 --num_kv_heads 2
 
-# Launch experiment comparison dashboard
+# 实验对比
 python experiments/runs/compare.py
 ```
 
-Experiment runs are automatically logged with config snapshots, loss curves, and model checkpoints.
+实验自动记录配置快照、loss 曲线和模型 checkpoint。
 
-## Test Suite
+## 测试
 
 ```bash
-# Run all 51+ tests
+# 运行全部 51+ 项测试
 python test_all.py
 
-# Or run individually:
-python -m np_impl.test         # Original Transformer: 36+ tests
-python -m modern_llm.test      # Modern LLM: 15+ tests
+# 分别运行
+python -m np_impl.test         # 原始 Transformer：36+ 项
+python -m modern_llm.test      # 现代 LLM：15+ 项
 ```
 
-## Requirements
+## 环境要求
 
 - Python 3.10+
-- NumPy (all modules)
-- PyTorch 2.0+ (required for `pytorch/` and training pipeline only)
+- NumPy（所有模块）
+- PyTorch 2.0+（训练 pipeline 需要，其他模块可选）
 
-## Related Projects
+## 相关项目
 
-- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — Production-grade LLM evaluation framework with Process Reward scoring
-- [handwritten-react-agent](https://github.com/weihuaguo270-ops/handwritten-react-agent) — Production-grade ReAct Agent framework
+- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — 生产级 LLM 评估框架，支持 Process Reward 评分
+- [handwritten-react-agent](https://github.com/weihuaguo270-ops/handwritten-react-agent) — 生产级 ReAct Agent 框架
 
 ## License
 
