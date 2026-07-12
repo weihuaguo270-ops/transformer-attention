@@ -12,11 +12,9 @@ TW = shutil.get_terminal_size().columns - 2  # 终端可用宽度
 
 
 def load_all():
-    """加载所有实验"""
+    """加载所有实验（扫描有 config.json + results.json 的目录）"""
     experiments = []
     for d in sorted(os.listdir(RUNS_DIR)):
-        if not d[0].isdigit():
-            continue
         cp = os.path.join(RUNS_DIR, d, "config.json")
         rp = os.path.join(RUNS_DIR, d, "results.json")
         if not os.path.exists(cp) or not os.path.exists(rp):
