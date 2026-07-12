@@ -229,7 +229,8 @@ def interactive_select(experiments):
             filtered = filter_experiments(experiments, ids=[eid])
             if filtered:
                 print_details(filtered)
-            continue
+            # 详情看完直接退出，不回到菜单
+            return None, None, None, None
 
         print("无效选项")
 
