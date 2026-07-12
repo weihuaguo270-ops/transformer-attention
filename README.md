@@ -34,9 +34,9 @@
 
 | 目录 | 内容 | 对应路线 |
 |------|------|---------|
-| `np_impl/` | 原始 Transformer | 共同起点 |
-| `modern_llm/` | GQA + Llama Block + MLA | 两条路线的现代方案合集 |
-| `pytorch/` | 框架工程版 | — |
+| `np_impl/` | 原始 Transformer（NumPy 手写） | 共同起点 |
+| `modern_llm/` | GQA + Llama Block + MLA + Spec Decoding + StreamingLLM（NumPy） | 两条路线的现代方案合集 |
+| `pytorch/` | GQA + Llama Block 的 PyTorch 实现 + GPT 训练（TinyStories） + 实验记录 | 训练工程实践 |
 
 ---
 

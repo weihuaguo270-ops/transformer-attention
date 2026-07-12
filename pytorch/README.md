@@ -1,6 +1,7 @@
 # PyTorch 版 — 框架工程实践
 
-> `pytorch/` — 与 `np_impl/` 结构对应的 PyTorch 实现，额外包含训练流程和对比实验。
+> `pytorch/` — 包含 np_impl 各模块的 PyTorch 镜像，以及 GQA、Llama Block、
+> 完整 GPT 训练 pipeline（TinyStories 数据集 + 命令行调参 + 自动实验记录）。
 
 `np_impl/` 的每一步计算都手动实现（适合理解原理），`pytorch/` 用 `nn.Linear`、`F.softmax`、自动微分等框架 API 重写（适合工程实践）。
 
@@ -32,16 +33,27 @@
 
 ## PyTorch 版独有内容
 
-### 训练流程（`train_transformer.py`）
+### GPT 训练流程（`train_gpt.py`）
 
-完整的 Encoder-Decoder 训练 pipeline：
+在 TinyStories 数据集上训练 Llama 架构的 GPT 模型：
 
-- Token Embedding + Positional Encoding → Encoder → Decoder → LM Head → vocab 概率
-- Teacher Forcing（CrossEntropyLoss + Adam）
-- 200 epoch 后 Acc 100%
+- 架构：Token Embedding → Llama Block × N → RMSNorm → LM Head
+- 注意力：GQA（Grouped Query Attention）+ RoPE
+- 训练：Teacher Forcing（CrossEntropyLoss + AdamW + Cosine Annealing）
+- 早停：Val Loss 连续 patience 轮不降即停止，自动保存最佳权重
+- 实验记录：每次训练自动存档到 `experiments/runs/`，含配置和结果
+
+支持交互式配置和命令行参数两种模式：
 
 ```bash
-python pytorch/train_transformer.py
+# 交互式配置（看参数→改参数→开始）
+python -m pytorch.train_gpt
+
+# 命令行快速开始
+python -m pytorch.train_gpt --d_model 64 --lr 1e-3 --epochs 30 --tag my-test
+
+# 查看所有参数
+python -m pytorch.train_gpt --help
 ```
 
 ### 位置编码对比实验（`compare_pos_encoding.py`）
