@@ -2,350 +2,257 @@
 实验对比工具 — 查看、筛选、对比实验记录
 
 用法:
-  python -m experiments.runs.compare                       # 全部
-  python -m experiments.runs.compare --tags baseline        # 按标签筛选
-  python -m experiments.runs.compare --tags lr-test         # 只看学习率实验
-  python -m experiments.runs.compare --ids 001 005          # 只看指定实验
-  python -m experiments.runs.compare --last 3               # 最近 3 次
-  python -m experiments.runs.compare --table brief           # 简表
-  python -m experiments.runs.compare --table full           # 详表（默认）
+  python experiments/runs/compare.py
 """
-import json, os, sys, argparse
+import json, os, sys, shutil
 from datetime import datetime
 
 RUNS_DIR = os.path.dirname(os.path.abspath(__file__))
+TW = shutil.get_terminal_size().columns - 2  # 终端可用宽度
 
 
 def load_all():
-    """加载所有实验，按编号排序"""
+    """加载所有实验"""
     experiments = []
     for d in sorted(os.listdir(RUNS_DIR)):
         if not d[0].isdigit():
             continue
-        config_path = os.path.join(RUNS_DIR, d, "config.json")
-        results_path = os.path.join(RUNS_DIR, d, "results.json")
-        if not os.path.exists(config_path) or not os.path.exists(results_path):
+        cp = os.path.join(RUNS_DIR, d, "config.json")
+        rp = os.path.join(RUNS_DIR, d, "results.json")
+        if not os.path.exists(cp) or not os.path.exists(rp):
             continue
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(cp, "r", encoding="utf-8") as f:
             config = json.load(f)
-        with open(results_path, "r", encoding="utf-8") as f:
+        with open(rp, "r", encoding="utf-8") as f:
             results = json.load(f)
         experiments.append((d, config, results))
     return experiments
 
 
+def trunc(s, n):
+    """截断"""
+    s = str(s)
+    return s if len(s) <= n else s[:n - 1] + "."
+
+
+def fmt(v, d=" -"):
+    """格式化数值"""
+    if v is None:
+        return d
+    if isinstance(v, (int, float)):
+        return f"{v:.2f}" if abs(v) < 10 else f"{v:.0f}" if abs(v) < 1e4 else f"{v:.1e}"
+    return str(v)
+
+
 def filter_experiments(experiments, tags=None, ids=None, last=None):
-    """按条件筛选"""
-    if ids:
-        experiments_filtered = []
-        for exp_id, config, results in experiments:
-            for i in ids:
-                # 支持短 ID (002) 和完整 ID (002_small_model)
-                search = i
-                if search.isdigit() and len(search) < 3:
-                    search = search.zfill(3)  # "2" → "002"
-                if exp_id.startswith(search) or exp_id == i:
-                    experiments_filtered.append((exp_id, config, results))
-                    break
-        experiments = experiments_filtered
+    """筛选实验"""
     if tags:
         tags = [t.lower() for t in tags]
-        experiments = [
-            e for e in experiments
-            if any(t in [x.lower() for x in e[1].get("tags", [])] for t in tags)
-        ]
+        experiments = [e for e in experiments if any(
+            t in [x.lower() for x in e[1].get("tags", [])] for t in tags)]
+    if ids:
+        filtered = []
+        for eid, c, r in experiments:
+            for i in ids:
+                s = i.zfill(3) if i.isdigit() and len(i) < 3 else i
+                if eid.startswith(s) or eid == i:
+                    filtered.append((eid, c, r))
+                    break
+        experiments = filtered
     if last:
         experiments = experiments[-last:]
     return experiments
 
 
-def fmt(v, default="-"):
-    """格式化数值"""
-    if v is None:
-        return default
-    if isinstance(v, (int, float)):
-        if abs(v) < 10:
-            return f"{v:.2f}"
-        elif abs(v) < 10000:
-            return f"{v:.0f}"
-        else:
-            return f"{v:.1e}"
-    return str(v)
+def fuzzy_find(experiments, query):
+    """模糊匹配"""
+    q = query.strip().lower()
+    if not q:
+        return []
+    matches = []
+    for eid, config, _ in experiments:
+        desc = config.get("description", config.get("desc", "")).lower()
+        tags = " ".join(config.get("tags", [])).lower()
+        if eid.lower().startswith(q) or q in desc or q in tags:
+            matches.append(eid)
+    return matches
 
 
-def print_table(experiments, mode="full"):
-    """打印对比表"""
+# ── 打印函数（自适应宽度） ────────────────────
+
+def print_table(experiments):
+    """打印指标汇总表"""
     if not experiments:
-        print("没有找到匹配的实验。")
+        print("没有匹配的实验。")
         return
+    W = min(TW, 120)
+    col_id, col_val, col_ppl, col_ep, col_bep, col_gap = 10, 8, 8, 5, 5, 6
+    remain = W - col_id - col_val - col_ppl - col_ep - col_bep - col_gap - 14
+    col_desc = max(16, remain // 3)
+    col_cfg = max(24, remain - col_desc)
 
-    if mode == "brief":
-        print(f"  {'ID':>10}  {'描述':>28}  {'Val Loss':>8}  {'PPL':>6}  {'轮次':>5}")
-        print("  " + "-" * 65)
-        for exp_id, config, results in experiments:
-            desc = config.get("description", config.get("desc", ""))[:28]
-            print(f"  {exp_id:>10}  {desc:>28}  "
-                  f"{fmt(results.get('best_val_loss')):>8}  "
-                  f"{fmt(results.get('perplexity')):>6}  "
-                  f"{fmt(results.get('epochs_actual')):>5}")
-        return
+    sep = "=" * W
+    h = (f"{'ID':>{col_id}}  {'描述':>{col_desc}}  {'模型':>{col_cfg}}  "
+         f"{'Val':>{col_val}}  {'PPL':>{col_ppl}}  {'轮':>{col_ep}}  "
+         f"{'最':>{col_bep}}  {'差':>{col_gap}}")
+    print(f"\n{sep}\n{h}\n{sep}")
 
-    # full mode
-    # 表头
-    print(f"\n{'=' * 100}")
-    print(f"{'ID':>10}  {'描述':>28}  {'模型配置':>30}  {'Val Loss':>8}  "
-          f"{'PPL':>8}  {'轮次':>5}  {'最佳轮':>5}  {'差距':>6}")
-    print(f"{'=' * 100}")
-
-    for exp_id, config, results in experiments:
-        desc = config.get("description", config.get("desc", ""))[:28]
-        d_model = config.get("d_model", "?")
+    for eid, config, results in experiments:
+        desc = trunc(config.get("description", ""), col_desc)
+        dm = config.get("d_model", "?")
         lr = config.get("lr", "?")
-        stories = config.get("data_stories", "?")
-        tags = ",".join(config.get("tags", []))[:14]
-        model_str = f"d={d_model} lr={lr} |{stories}s {tags}"
-
-        best_val = results.get("best_val_loss")
-        ppl = results.get("perplexity")
-        epochs_actual = results.get("epochs_actual")
-        best_epoch = results.get("best_epoch") if results.get("best_epoch") else "-"
-        train_loss = results.get("final_train_loss")
-        val_loss = results.get("final_val_loss")
-        gap = round(val_loss - train_loss, 2) if isinstance(train_loss, (int, float)) and isinstance(val_loss, (int, float)) else "-"
-
-        print(f"{exp_id:>10}  {desc:>28}  {model_str:>30}  "
-              f"{fmt(best_val):>8}  {fmt(ppl):>8}  "
-              f"{fmt(epochs_actual):>5}  {str(best_epoch):>5}  {fmt(gap):>6}")
+        st = config.get("data_stories", "?")
+        tags = ",".join(config.get("tags", []))[:max(4, col_cfg - 14)]
+        cfg = trunc(f"d={dm} lr={lr} |{st}s {tags}", col_cfg)
+        bv = results.get("best_val_loss")
+        pp = results.get("perplexity")
+        ea = results.get("epochs_actual")
+        be = results.get("best_epoch") or "-"
+        tl = results.get("final_train_loss")
+        vl = results.get("final_val_loss")
+        gp = round(vl - tl, 2) if isinstance(tl, (int, float)) and isinstance(vl, (int, float)) else "-"
+        print(f"{eid:>{col_id}}  {desc:>{col_desc}}  {cfg:>{col_cfg}}  "
+              f"{fmt(bv):>{col_val}}  {fmt(pp):>{col_ppl}}  "
+              f"{fmt(ea):>{col_ep}}  {str(be):>{col_bep}}  {fmt(gp):>{col_gap}}")
 
 
-def print_deltas(experiments, baseline_id="001"):
-    """打印相对 baseline 的变化"""
-    baseline = None
-    others = []
-    for exp_id, config, results in experiments:
-        if baseline_id in exp_id:
-            baseline = results
+def print_deltas(experiments, baseline="001"):
+    """打印变化量"""
+    base = others = None
+    for e in experiments:
+        if baseline in e[0]:
+            base = e[2]
         else:
-            others.append((exp_id, config, results))
-
-    if not baseline:
-        print(f"\n⚠️  未找到 baseline ({baseline_id})")
+            others = e
+    if not base:
+        print("\n⚠️  未找到 baseline")
         return
+    bv, bp, be = base.get("best_val_loss", 0), base.get("perplexity", 0), base.get("epochs_actual", 0)
+    W = min(TW, 100)
+    ci, cv, cp, ce = 10, 10, 10, 8
+    cd = max(10, W - ci - cv - cp - ce - 8)
+    sep = "=" * W
+    print(f"\n{sep}\n相对 baseline ({baseline}) 的变化（负数=变好，正数=变差）\n{sep}")
+    print(f"{'ID':>{ci}}  {'描述':>{cd}}  {'Val变化':>{cv}}  {'PPL变化':>{cp}}  {'轮次变化':>{ce}}")
+    print("-" * W)
 
-    b_val = baseline.get("best_val_loss", 0)
-    b_ppl = baseline.get("perplexity", 0)
-    b_ep = baseline.get("epochs_actual", 0)
-
-    print(f"\n{'=' * 100}")
-    print(f"相对 baseline ({baseline_id}) 的变化（负数=变好 ✅，正数=变差 ❌）")
-    print(f"{'=' * 100}")
-    print(f"{'ID':>10}  {'描述':>28}  {'Val变化':>10}  {'PPL变化':>10}  {'轮次变化':>8}")
-    print("-" * 70)
-
-    for exp_id, config, results in others:
-        desc = config.get("description", config.get("desc", ""))[:28]
-        val = results.get("best_val_loss")
-        ppl = results.get("perplexity")
-        ep = results.get("epochs_actual")
-
-        val_d = f"{val - b_val:+.2f}" if isinstance(val, (int, float)) else "?"
-        ppl_d = f"{ppl / b_ppl:.1%}" if isinstance(ppl, (int, float)) and b_ppl else "?"
-        ep_d = f"{ep - b_ep:+d}" if isinstance(ep, int) else "?"
-
-        print(f"{exp_id:>10}  {desc:>28}  {val_d:>10}  {ppl_d:>10}  {ep_d:>8}")
+    for eid, cfg, res in experiments:
+        if baseline in eid:
+            continue
+        desc = trunc(cfg.get("description", ""), cd)
+        v = res.get("best_val_loss")
+        p = res.get("perplexity")
+        e = res.get("epochs_actual")
+        vd = f"{v - bv:+.2f}" if isinstance(v, (int, float)) else "?"
+        pd = f"{p / bp:.1%}" if isinstance(p, (int, float)) and bp else "?"
+        ed = f"{e - be:+d}" if isinstance(e, int) else "?"
+        print(f"{eid:>{ci}}  {desc:>{cd}}  {vd:>{cv}}  {pd:>{cp}}  {ed:>{ce}}")
 
 
-def print_generated(experiments, max_len=120):
+def print_generated(experiments):
     """打印生成文本"""
-    print(f"\n{'=' * 100}")
-    print("生成文本对比")
-    print(f"{'=' * 100}")
-    for exp_id, config, results in experiments:
+    W = min(TW, 100)
+    print(f"\n{'=' * W}\n生成文本对比\n{'=' * W}")
+    for eid, config, results in experiments:
         gen = results.get("generated", "")
         if gen:
-            desc = config.get("description", config.get("desc", ""))[:28]
-            print(f"\n  {exp_id} {desc}:")
-            print(f"    {gen[:max_len]}")
+            desc = config.get("description", "")[:40]
+            print(f"\n  {eid} {desc}:\n    {gen[:W - 4]}")
 
 
 def print_details(experiments):
-    """打印某次实验的详细信息"""
-    for exp_id, config, results in experiments:
-        print(f"\n{'=' * 60}")
-        print(f"实验: {exp_id}")
-        print(f"{'=' * 60}")
-        print(f"\n配置:")
+    """打印某个实验的完整信息"""
+    for eid, config, results in experiments:
+        print(f"\n{'=' * 50}\n实验: {eid}\n{'=' * 50}")
+        print("配置:")
         for k, v in config.items():
             print(f"  {k}: {v}")
-        print(f"\n结果:")
+        print("结果:")
         for k, v in results.items():
             print(f"  {k}: {v}")
 
 
-def fuzzy_find(experiments, query):
-    """模糊匹配实验，返回匹配列表"""
-    query = query.strip().lower()
-    if not query:
-        return []
-
-    matches = []
-    for exp_id, config, _ in experiments:
-        desc = config.get("description", config.get("desc", "")).lower()
-        tags = " ".join(config.get("tags", [])).lower()
-        # 匹配 ID 前缀、描述关键词、标签
-        if (exp_id.lower().startswith(query) or query in desc or query in tags):
-            matches.append(exp_id)
-    return matches
-
+# ── 交互式选择 ────────────────────────────
 
 def interactive_select(experiments):
-    """交互式选择实验"""
     while True:
-        print(f"\n共 {len(experiments)} 个实验可用。选择查看方式：")
+        print(f"\n共 {len(experiments)} 个实验。选择查看方式：")
         print("  1) 全部显示")
         print("  2) 按标签筛选")
         print("  3) 按 ID 选择")
         print("  4) 只看最近 N 次")
         print("  5) 查看某个实验的完整配置和结果")
         print("  0) 退出")
-
-        choice = input("\n输入选项 (0-5): ").strip()
-        if choice == "0":
-            return None, None, None, None
-        elif choice == "1":
-            return experiments, "all", False, False
-        elif choice == "2":
-            # 列出所有可用标签
+        c = input("\n输入选项 (0-5): ").strip()
+        if c == "0":
+            return None
+        elif c == "1":
+            return experiments
+        elif c == "2":
             all_tags = set()
-            for _, config, _ in experiments:
-                all_tags.update(config.get("tags", []))
-            print(f"\n可用标签: {', '.join(sorted(all_tags))}")
-            tag_input = input("输入标签关键词（部分匹配即可）: ").strip().lower()
-
-            if not tag_input:
-                print("未输入标签，显示全部。")
-                return experiments, "all", False, False
-
-            # 模糊匹配标签
-            matched_tags = [t for t in all_tags if tag_input in t.lower()]
-            if not matched_tags:
-                print(f"没有匹配 '{tag_input}' 的标签，显示全部。")
-                return experiments, "all", False, False
-
-            filtered = filter_experiments(experiments, tags=matched_tags)
-            print(f"匹配标签 {matched_tags} → {len(filtered)} 个实验")
-            if not filtered:
+            for _, cfg, _ in experiments:
+                all_tags.update(cfg.get("tags", []))
+            print(f"可用标签: {', '.join(sorted(all_tags))}")
+            q = input("输入标签关键词: ").strip().lower()
+            matched = [t for t in all_tags if q in t] if q else list(all_tags)
+            if not matched:
+                print("无匹配，显示全部。")
+                return experiments
+            flt = filter_experiments(experiments, tags=matched)
+            print(f"匹配标签 {matched} → {len(flt)} 个")
+            return flt if flt else experiments
+        elif c == "3":
+            q = input("输入关键词 (ID/描述/标签): ").strip()
+            if not q:
+                return experiments
+            m = fuzzy_find(experiments, q)
+            if not m:
+                print(f"无匹配 '{q}'")
                 continue
-            return filtered, "all", False, False
-        elif choice == "3":
-            query = input("输入实验关键词（ID前缀/描述/标签，部分匹配即可）: ").strip()
-            if not query:
-                print("未输入关键词，显示全部。")
-                return experiments, "all", False, False
-
-            matches = fuzzy_find(experiments, query)
-            if not matches:
-                print(f"没有匹配 '{query}' 的实验。")
+            if len(m) == 1:
+                print(f"匹配: {m[0]}")
+                return filter_experiments(experiments, ids=m)
+            print(f"匹配 {len(m)} 个:")
+            for i, eid in enumerate(m, 1):
+                d = next((cfg.get("description", "")[:40] for e, cfg, _ in experiments if e == eid), "")
+                print(f"  {i}) {eid} — {d}")
+            s = input("选择编号 (回车=全部): ").strip()
+            return filter_experiments(experiments, ids=[m[int(s) - 1]] if s.isdigit() and 1 <= int(s) <= len(m) else m)
+        elif c == "4":
+            n = input("看最近几次?: ").strip()
+            return filter_experiments(experiments, last=int(n)) if n.isdigit() else experiments
+        elif c == "5":
+            print("可用实验:")
+            for i, (eid, cfg, _) in enumerate(experiments, 1):
+                print(f"  {i}) {eid} — {cfg.get('description', '')[:50]}")
+            q = input("\n输入编号或关键词: ").strip()
+            if not q:
                 continue
-            elif len(matches) == 1:
-                eid = matches[0]
-                print(f"匹配: {eid}")
-            else:
-                print(f"\n匹配 {len(matches)} 个实验:")
-                for i, eid in enumerate(matches, 1):
-                    # 找对应描述
-                    desc = ""
-                    for exp_id, config, _ in experiments:
-                        if exp_id == eid:
-                            desc = config.get("description", "")[:40]
-                            break
-                    print(f"  {i}) {eid} — {desc}")
-                sel = input("选择编号 (回车=全部): ").strip()
-                if sel.isdigit() and 1 <= int(sel) <= len(matches):
-                    eid = matches[int(sel) - 1]
-                    matches = [eid]
-                else:
-                    print(f"显示全部 {len(matches)} 个。")
-
-            filtered = filter_experiments(experiments, ids=matches)
-            return filtered, "all", False, False
-        elif choice == "4":
-            n = input("看最近几次？: ").strip()
-            if n.isdigit():
-                filtered = filter_experiments(experiments, last=int(n))
-                return filtered, "all", False, False
-            print("无效数字")
-            continue
-        elif choice == "5":
-            print(f"\n可用实验:")
-            for exp_id, config, _ in experiments:
-                desc = config.get("description", "")[:40]
-                print(f"  {exp_id} — {desc}")
-            query = input("\n输入关键词筛选，或直接输入编号: ").strip()
-
-            # 先检查是不是直接输入了编号
-            if query.isdigit():
-                idx = int(query)
+            if q.isdigit():
+                idx = int(q)
                 if 1 <= idx <= len(experiments):
                     eid = experiments[idx - 1][0]
                 else:
-                    print(f"编号 {idx} 超出范围 (1-{len(experiments)})")
                     continue
-            elif query:
-                matches = fuzzy_find(experiments, query)
-                if not matches:
-                    print(f"没有匹配 '{query}' 的实验。")
-                    continue
-                elif len(matches) == 1:
-                    eid = matches[0]
-                else:
-                    print(f"\n匹配 {len(matches)} 个:")
-                    for i, eid2 in enumerate(matches, 1):
-                        desc = ""
-                        for exp_id, config, _ in experiments:
-                            if exp_id == eid2:
-                                desc = config.get("description", "")[:40]
-                                break
-                        print(f"  {i}) {eid2} — {desc}")
-                    sel = input("选择编号: ").strip()
-                    if not sel.isdigit() or not (1 <= int(sel) <= len(matches)):
-                        print("无效选择。")
-                        continue
-                    eid = matches[int(sel) - 1]
             else:
-                continue
-
-            filtered = filter_experiments(experiments, ids=[eid])
-            if filtered:
-                print_details(filtered)
-            return None, None, None, None
+                m = fuzzy_find(experiments, q)
+                if not m:
+                    continue
+                eid = m[0] if len(m) == 1 else m[int(input("选择编号: ")) - 1]
+            flt = filter_experiments(experiments, ids=[eid])
+            if flt:
+                print_details(flt)
+            return None
+        else:
+            print("无效选项")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="实验对比工具")
-    parser.add_argument("--tags", nargs="+", help="按标签筛选")
-    parser.add_argument("--ids", nargs="+", help="按 ID 筛选")
-    parser.add_argument("--last", type=int, help="只看最近 N 次")
-    parser.add_argument("--interactive", action="store_true", default=True,
-                        help="交互模式（默认）")
-    parser.add_argument("--batch", action="store_true", help="批量模式（非交互）")
-    args = parser.parse_args()
-
-    experiments = load_all()
-
-    if args.batch:
-        # 批量模式：用命令行参数筛选
-        experiments = filter_experiments(experiments, args.tags, args.ids, args.last)
-        print_table(experiments, "full")
-        print_deltas(experiments)
-        print_generated(experiments)
-    else:
-        # 交互模式
-        result = interactive_select(experiments)
-        if result[0] is None:
-            print("退出。")
-            sys.exit(0)
-        selected, _, _, _ = result
-        print_table(selected, "full")
-        print_deltas(selected)
-        print_generated(selected)
+    exps = load_all()
+    sel = interactive_select(exps)
+    if sel is None:
+        print("退出。")
+        sys.exit(0)
+    print_table(sel)
+    print_deltas(sel)
+    print_generated(sel)
