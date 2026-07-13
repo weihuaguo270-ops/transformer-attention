@@ -164,7 +164,7 @@ python experiments/runs/compare.py
 
 实验自动记录配置快照、loss 曲线和模型 checkpoint。
 
-## 测试
+## 测试与基准
 
 ```bash
 # 运行全部 51+ 项测试
@@ -173,18 +173,22 @@ python test_all.py
 # 分别运行
 python -m np_impl.test         # 原始 Transformer：36+ 项
 python -m modern_llm.test      # 现代 LLM：15+ 项
+
+# 实际前向耗时微基准（CI 使用短序列；本地可加长 / 换 GPU）
+python -m experiments.benchmark_attention
+python -m experiments.benchmark_attention --device cuda --seq_len 2048
 ```
 
 ## 环境要求
 
 - Python 3.10+
 - NumPy（所有模块）
-- PyTorch 2.0+（训练 pipeline 需要，其他模块可选）
+- PyTorch 2.0+（训练 pipeline / benchmark 需要，其他模块可选）
 
 ## 相关项目
 
-- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — LLM 评估框架，支持 Process Reward 评分
-- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 框架
+- [llm-eval-engine](https://github.com/weihuaguo270-ops/llm-eval-engine) — LLM 评估实验框架
+- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 学习实现
 
 ## License
 
