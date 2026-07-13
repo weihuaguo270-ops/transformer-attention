@@ -2,7 +2,18 @@
 
 [![CI](https://github.com/weihuaguo270-ops/transformer-attention/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/transformer-attention/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**NumPy/PyTorch 实现的 Transformer Attention 机制全集** — 涵盖从 2017 年原始 Transformer 到现代 LLM 架构（GQA、Llama Block、DeepSeek MLA、Speculative Decoding、Attention Sinks）的完整演进。
+**NumPy/PyTorch 教学实现的 Transformer Attention 机制** — 涵盖从 2017 年原始 Transformer 到现代 LLM 架构（GQA、Llama Block、DeepSeek MLA、Speculative Decoding、Attention Sinks）的演进对照。
+
+## 快速开始
+
+```bash
+pip install -e .
+# 可选：训练相关依赖
+pip install -e ".[pytorch]"
+
+# 运行全部测试
+python test_all.py
+```
 
 ## 架构
 
@@ -116,15 +127,17 @@ MLA:   c = h · W_DKV,     缓存 c（d_c 维, d_c << d_model）
        K = c · W_UK,       V = c · W_UV（从压缩缓存解压）
 ```
 
-**吸收矩阵技巧**——推理时解压步骤可省略：
+**吸收矩阵技巧（论文概念；本仓库当前实现仍按逐步解压路径计算，吸收优化为规划中）：**
 ```
-Q · (W_UK · c) = (Q · W_UK) · c    # W_UK 被吸收到 Q 投影中
+Q · (W_UK · c) = (Q · W_UK) · c    # 理想情况下 W_UK 可吸收到 Q 投影中
 ```
 
-实际参数（DeepSeek V2, d_model=5120）：
+实际参数（DeepSeek V2, d_model=5120，来自论文量级说明）：
 - MHA 每步缓存：2 × 5120 = 10,240 维
 - MLA 每步缓存：512 + 64 = 576 维
 - **压缩比：约 18x**
+
+> 说明：仓库内训练脚本默认为 TinyStories 级小模型（如 `d_model=64`），用于理解与对照实验，非大规模预训练结果。
 
 ### Speculative Decoding
 
