@@ -193,3 +193,7 @@ python -m experiments.benchmark_attention --device cuda --seq_len 2048
 ## License
 
 MIT
+
+## 贡献与安全
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md) / [SECURITY.md](SECURITY.md)。
